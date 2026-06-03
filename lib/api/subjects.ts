@@ -7,6 +7,7 @@ import type {
   ClassroomResponse,
   CreateClassroomRequest,
   DocumentResponse,
+  UpdateDocumentRequest,
 } from '../types';
 
 export const subjectsApi = {
@@ -79,6 +80,11 @@ export const documentsApi = {
     const res = await apiClient.post<ApiResponse<DocumentResponse>>('/documents', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return res.data.data;
+  },
+
+  update: async (id: number, data: UpdateDocumentRequest): Promise<DocumentResponse> => {
+    const res = await apiClient.patch<ApiResponse<DocumentResponse>>(`/documents/${id}`, data);
     return res.data.data;
   },
 

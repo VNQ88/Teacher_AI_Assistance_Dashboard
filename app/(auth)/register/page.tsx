@@ -8,6 +8,8 @@ import { z } from 'zod';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api/auth';
+import AuthShell from '@/components/auth/AuthShell';
+import Spinner from '@/components/auth/Spinner';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
@@ -33,9 +35,14 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      await authApi.register({ email: data.email, password: data.password, fullName: data.fullName });
-      toast.success('Account created! Please check your email for verification.');
-      router.push(`/verify-otp?email=${encodeURIComponent(data.email)}&type=activate`);
+      const res = await authApi.register({ email: data.email, password: data.password, fullName: data.fullName });
+      const expiresInSeconds = res.data?.expiresInSeconds ?? 120;
+      toast.success(
+        res.data?.resent
+          ? 'Account already exists but not activated. A new code has been sent.'
+          : 'Account created! Please check your email for verification.'
+      );
+      router.push(`/verify-otp?email=${encodeURIComponent(data.email)}&type=activate&expires=${expiresInSeconds}`);
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Registration failed. Please try again.';
       toast.error(message);
@@ -45,39 +52,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Hero */}
-      <div className="hidden lg:flex lg:w-2/5 signature-gradient flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-80 h-80 rounded-full bg-white blur-3xl" />
-        </div>
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-white" style={{ fontSize: '20px' }}>auto_awesome</span>
-          </div>
-          <h1 className="text-xl font-black text-white">The Curator</h1>
-        </div>
-        <div className="relative z-10">
-          <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">
-            Start your AI-powered teaching journey
-          </h2>
-          <p className="text-white/70 leading-relaxed">
-            Join thousands of educators using AI to create better learning experiences.
-          </p>
-        </div>
-        <p className="relative z-10 text-white/40 text-xs">© 2024 Teacher AI Assistance</p>
+    <AuthShell
+      heroTitle={<>Start your AI-powered<br />teaching journey</>}
+      heroSubtitle="Join thousands of educators using AI to create better learning experiences."
+    >
+      <div className="mb-8">
+        <h2 className="text-3xl font-extrabold text-[#191C1E] tracking-tight mb-2">Create account</h2>
+        <p className="text-[#6F7880] text-sm">Get started with your teaching workspace</p>
       </div>
 
-      {/* Right Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-[#F7F9FB]">
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <h2 className="text-3xl font-extrabold text-[#191C1E] tracking-tight mb-2">Create account</h2>
-            <p className="text-[#6F7880] text-sm">Get started with your teaching workspace</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Full Name */}
             <div>
               <label className="block text-sm font-semibold text-[#3F484F] mb-2">Full Name</label>
@@ -108,7 +92,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Minimum 5 characters"
+                  placeholder="Minimum 8 characters"
                   className={`w-full bg-white px-4 py-3 pr-11 rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-[#00658D]/40 shadow-ambient transition-all ${errors.password ? 'ring-2 ring-[#BA1A1A]/50' : ''}`}
                   {...register('password')}
                 />
@@ -137,7 +121,7 @@ export default function RegisterPage() {
               className="w-full signature-gradient text-white font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all shadow-ambient-md disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
             >
               {isLoading ? (
-                <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Creating account...</>
+                <><Spinner />Creating account...</>
               ) : (
                 <><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>person_add</span>Create Account</>
               )}
@@ -151,12 +135,10 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-[#6F7880] mt-6">
-            Already have an account?{' '}
-            <Link href="/login" className="text-[#00658D] font-semibold hover:text-[#004C6B] transition-colors">Sign in</Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <p className="text-center text-sm text-[#6F7880] mt-6">
+        Already have an account?{' '}
+        <Link href="/login" className="text-[#00658D] font-semibold hover:text-[#004C6B] transition-colors">Sign in</Link>
+      </p>
+    </AuthShell>
   );
 }

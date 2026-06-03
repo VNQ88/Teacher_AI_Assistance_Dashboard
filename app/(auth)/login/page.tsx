@@ -8,7 +8,8 @@ import { z } from 'zod';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api/auth';
-import type { Metadata } from 'next';
+import AuthShell from '@/components/auth/AuthShell';
+import Spinner from '@/components/auth/Spinner';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -34,6 +35,18 @@ export default function LoginPage() {
       router.push('/');
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Login failed. Please try again.';
+      // Backend returns "User is disabled" for registered-but-unactivated accounts.
+      if (/disabled|not activated/i.test(message)) {
+        try {
+          const res = await authApi.resendActivationCode(data.email);
+          toast('Your account is not activated yet. We sent you a new code.', { icon: '✉️' });
+          router.push(`/verify-otp?email=${encodeURIComponent(data.email)}&type=activate&expires=${res.data?.expiresInSeconds ?? 60}`);
+          return;
+        } catch {
+          toast.error('Your account is not activated. Please check your email or register again.');
+          return;
+        }
+      }
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -41,86 +54,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Hero Column */}
-      <div className="hidden lg:flex lg:w-1/2 signature-gradient flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white blur-3xl" />
-          <div className="absolute bottom-32 right-10 w-96 h-96 rounded-full bg-white blur-3xl" />
-        </div>
-
-        {/* Logo */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <span className="material-symbols-outlined text-white" style={{ fontSize: '22px' }}>
-                auto_awesome
-              </span>
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-white tracking-tight">The Curator</h1>
-              <p className="text-white/60 text-xs font-medium uppercase tracking-widest">AI Assistant</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Center content */}
-        <div className="relative z-10 space-y-8">
-          <div>
-            <h2 className="text-4xl font-extrabold text-white tracking-tight leading-tight mb-4">
-              Empower your<br />teaching with AI
-            </h2>
-            <p className="text-white/75 text-lg leading-relaxed">
-              Manage your curriculum, chat with AI about your documents, and generate assessment questions automatically.
-            </p>
-          </div>
-
-          {/* Feature pills */}
-          <div className="flex flex-col gap-3">
-            {[
-              { icon: 'chat', label: 'RAG-powered AI Chatbot' },
-              { icon: 'quiz', label: 'Auto Question Generation' },
-              { icon: 'menu_book', label: 'Smart Document Management' },
-            ].map((feature) => (
-              <div
-                key={feature.label}
-                className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3"
-              >
-                <span className="material-symbols-outlined text-white/90" style={{ fontSize: '18px' }}>
-                  {feature.icon}
-                </span>
-                <span className="text-white/90 text-sm font-medium">{feature.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom credit */}
-        <div className="relative z-10">
-          <p className="text-white/40 text-xs">© 2024 Teacher AI Assistance Platform</p>
-        </div>
+    <AuthShell>
+      <div className="mb-8">
+        <h2 className="text-3xl font-extrabold text-[#191C1E] tracking-tight mb-2">
+          Welcome back
+        </h2>
+        <p className="text-[#6F7880] text-sm">Sign in to your teaching workspace</p>
       </div>
 
-      {/* Right Form Column */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-[#F7F9FB]">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 rounded-xl signature-gradient flex items-center justify-center">
-              <span className="material-symbols-outlined text-white" style={{ fontSize: '16px' }}>auto_awesome</span>
-            </div>
-            <span className="text-base font-black text-[#00658D]">The Curator</span>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-3xl font-extrabold text-[#191C1E] tracking-tight mb-2">
-              Welcome back
-            </h2>
-            <p className="text-[#6F7880] text-sm">Sign in to your teaching workspace</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-semibold text-[#3F484F] mb-2">Email</label>
@@ -185,13 +127,7 @@ export default function LoginPage() {
               className="w-full signature-gradient text-white font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all duration-150 shadow-ambient-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </>
+                <><Spinner />Signing in...</>
               ) : (
                 <>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>login</span>
@@ -237,15 +173,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Register Link */}
-          <p className="text-center text-sm text-[#6F7880] mt-8">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-[#00658D] font-semibold hover:text-[#004C6B] transition-colors">
-              Create account
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      {/* Register Link */}
+      <p className="text-center text-sm text-[#6F7880] mt-8">
+        Don&apos;t have an account?{' '}
+        <Link href="/register" className="text-[#00658D] font-semibold hover:text-[#004C6B] transition-colors">
+          Create account
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

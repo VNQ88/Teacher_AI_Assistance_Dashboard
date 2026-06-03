@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { subjectsApi, documentsApi } from '@/lib/api/subjects';
-import type { SubjectResponse, DocumentResponse } from '@/lib/types';
+import type { SubjectResponse, DocumentResponse, UpdateDocumentRequest } from '@/lib/types';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -48,6 +48,36 @@ export default function SubjectDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [reprocessingDocId, setReprocessingDocId] = useState<number | null>(null);
+
+  const [docToEdit, setDocToEdit] = useState<DocumentResponse | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editForm, setEditForm] = useState<UpdateDocumentRequest>({ title: '', description: '' });
+
+  const openEditModal = (doc: DocumentResponse) => {
+    setEditForm({ title: doc.title, description: doc.description ?? '' });
+    setDocToEdit(doc);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docToEdit) return;
+    if (!editForm.title.trim()) return toast.error('Please enter a title');
+
+    setIsUpdating(true);
+    try {
+      const updated = await documentsApi.update(docToEdit.id, {
+        title: editForm.title.trim(),
+        description: editForm.description?.trim() ? editForm.description.trim() : undefined,
+      });
+      setDocuments(prev => prev.map(d => d.id === updated.id ? updated : d));
+      toast.success('Document updated');
+      setDocToEdit(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update document');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleReprocessDocument = async (doc: DocumentResponse) => {
     setReprocessingDocId(doc.id);
@@ -311,6 +341,15 @@ export default function SubjectDetailPage() {
                                 <span className={clsx('material-symbols-outlined', reprocessingDocId === doc.id ? 'animate-spin' : '')} style={{ fontSize: '18px' }}>refresh</span>
                               </button>
                             )}
+                            {canEdit && (
+                              <button
+                                onClick={() => openEditModal(doc)}
+                                className="p-2 hover:bg-[#ECEEF0] rounded-lg transition-all text-[#6F7880]"
+                                title="Edit"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                              </button>
+                            )}
                             <button
                               onClick={() => handleViewDocument(doc)}
                               disabled={viewingDocId === doc.id}
@@ -394,6 +433,65 @@ export default function SubjectDetailPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Document Modal */}
+      {docToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+          <div className="bg-white rounded-3xl shadow-ambient-md w-full max-w-lg p-8">
+            <h3 className="text-xl font-bold text-[#191C1E] mb-2">Edit Document</h3>
+            <p className="text-sm text-[#6F7880] mb-6">Update the title and description. The file and processing status are unchanged.</p>
+
+            <form onSubmit={handleUpdateSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-[#191C1E] mb-1.5">Title <span className="text-[#BA1A1A]">*</span></label>
+                <input
+                  type="text"
+                  required
+                  maxLength={255}
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="Enter document title"
+                  className="w-full px-4 py-3 bg-[#F7F9FB] border border-[#BEC8D0]/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00658D]/30 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#191C1E] mb-1.5">Description <span className="text-[#6F7880] font-normal">(Optional)</span></label>
+                <textarea
+                  maxLength={1000}
+                  value={editForm.description ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Enter a brief description"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-[#F7F9FB] border border-[#BEC8D0]/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00658D]/30 transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDocToEdit(null)}
+                  disabled={isUpdating}
+                  className="flex-1 py-3 bg-[#F2F4F6] text-[#44474E] font-bold rounded-xl hover:bg-[#ECEEF0] transition-colors disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating || !editForm.title.trim()}
+                  className="flex-1 py-3 signature-gradient text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {isUpdating ? (
+                    <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Saving...</>
+                  ) : (
+                    <><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>save</span>Save Changes</>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

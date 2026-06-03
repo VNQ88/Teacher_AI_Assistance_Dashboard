@@ -109,7 +109,7 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const rawRes = await fetch('/api/auth/refresh', {
+      const rawRes = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),

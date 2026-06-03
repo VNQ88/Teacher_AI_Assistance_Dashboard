@@ -7,6 +7,7 @@ import type {
   RegistrationRequest,
   VerifyCodeRequest,
   SetNewPasswordRequest,
+  OtpSentResponse,
 } from '../types';
 
 export const authApi = {
@@ -19,7 +20,12 @@ export const authApi = {
   },
 
   register: async (data: RegistrationRequest) => {
-    const res = await apiClient.post<ApiResponse<null>>('/auth/register', data);
+    const res = await apiClient.post<ApiResponse<OtpSentResponse>>('/auth/register', data);
+    return res.data;
+  },
+
+  resendActivationCode: async (email: string) => {
+    const res = await apiClient.post<ApiResponse<OtpSentResponse>>(`/auth/resend-activation-code?email=${encodeURIComponent(email)}`);
     return res.data;
   },
 
@@ -34,7 +40,12 @@ export const authApi = {
   },
 
   forgotPassword: async (email: string) => {
-    const res = await apiClient.post<ApiResponse<null>>(`/auth/forgot-password?email=${encodeURIComponent(email)}`);
+    const res = await apiClient.post<ApiResponse<OtpSentResponse>>(`/auth/forgot-password?email=${encodeURIComponent(email)}`);
+    return res.data;
+  },
+
+  resendResetCode: async (email: string) => {
+    const res = await apiClient.post<ApiResponse<OtpSentResponse>>(`/auth/resend-reset-code?email=${encodeURIComponent(email)}`);
     return res.data;
   },
 
@@ -44,15 +55,11 @@ export const authApi = {
   },
 
   logout: async () => {
-    const accessToken = tokenManager.getAccessToken();
     const refreshToken = tokenManager.getRefreshToken();
-    if (accessToken && refreshToken) {
+    if (refreshToken) {
       try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accessToken, refreshToken }),
-        });
+        // refreshToken in body; apiClient attaches the optional Bearer access token
+        await apiClient.post('/auth/logout', { refreshToken });
       } catch {
         // Proceed with local cleanup even if server call fails
       }

@@ -31,7 +31,6 @@ export interface RegistrationRequest {
 export interface AuthResponse {
   accessToken: string;
   refreshToken?: string;
-  tokenType: string;
 }
 
 export interface VerifyCodeRequest {
@@ -44,6 +43,11 @@ export interface SetNewPasswordRequest {
   code: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+export interface OtpSentResponse {
+  expiresInSeconds: number;
+  resent: boolean;
 }
 
 export interface UpdateProfileRequest {
@@ -165,6 +169,11 @@ export interface DocumentResponse {
   processingError?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UpdateDocumentRequest {
+  title: string;
+  description?: string;
 }
 
 // ============================================
