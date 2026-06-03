@@ -109,14 +109,15 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Use a plain axios call to avoid triggering this interceptor again
-      const res = await axios.post<ApiResponse<AuthResponse>>(
-        `${BASE_URL}/auth/refresh`,
-        {},
-        { headers: { 'Content-Type': 'application/json', 'Referer': refreshToken } }
-      );
+      const rawRes = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      const res: ApiResponse<AuthResponse> = await rawRes.json();
+      if (!rawRes.ok) throw new Error('Refresh failed');
 
-      const { accessToken, refreshToken: newRefreshToken } = res.data.data;
+      const { accessToken, refreshToken: newRefreshToken } = res.data;
       tokenManager.setAccessToken(accessToken);
       if (newRefreshToken) tokenManager.setRefreshToken(newRefreshToken);
 

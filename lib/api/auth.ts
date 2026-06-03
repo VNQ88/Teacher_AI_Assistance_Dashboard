@@ -1,7 +1,5 @@
-import axios from 'axios';
 import apiClient, { tokenManager } from './client';
 
-const BASE_URL: string = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:8080/api';
 import type {
   ApiResponse,
   AuthResponse,
@@ -50,11 +48,11 @@ export const authApi = {
     const refreshToken = tokenManager.getRefreshToken();
     if (accessToken && refreshToken) {
       try {
-        await axios.post(
-          `${BASE_URL}/auth/logout`,
-          {},
-          { headers: { Authorization: `Bearer ${accessToken}`, Referer: refreshToken } }
-        );
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken, refreshToken }),
+        });
       } catch {
         // Proceed with local cleanup even if server call fails
       }
