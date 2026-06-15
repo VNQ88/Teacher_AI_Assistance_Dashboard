@@ -6,4 +6,4 @@ services:
       network: host
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-    image: vnq88/teacher-ai-dashboard-frontend:latest
+    image: vnq88/teacher-ai-dashboard-frontend:1.0.0

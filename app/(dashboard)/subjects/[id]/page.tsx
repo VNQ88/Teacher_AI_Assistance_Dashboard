@@ -5,6 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { subjectsApi, documentsApi } from '@/lib/api/subjects';
+import {
+  FILE_TOO_LARGE_MESSAGE,
+  MAX_UPLOAD_SIZE_MB,
+  isUploadFileTooLarge,
+} from '@/lib/upload-validation';
 import type { SubjectResponse, DocumentResponse, UpdateDocumentRequest } from '@/lib/types';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -134,9 +139,23 @@ export default function SubjectDetailPage() {
     }
   };
 
+  const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+
+    if (file && isUploadFileTooLarge(file.size)) {
+      e.target.value = '';
+      setUploadForm(prev => ({ ...prev, file: null }));
+      toast.error(FILE_TOO_LARGE_MESSAGE);
+      return;
+    }
+
+    setUploadForm(prev => ({ ...prev, file }));
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadForm.file) return toast.error('Please select a file');
+    if (isUploadFileTooLarge(uploadForm.file.size)) return toast.error(FILE_TOO_LARGE_MESSAGE);
     if (!uploadForm.title.trim()) return toast.error('Please enter a title');
 
     setIsUploading(true);
@@ -153,7 +172,11 @@ export default function SubjectDetailPage() {
       setShowUploadModal(false);
       setUploadForm({ title: '', description: '', file: null });
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to upload document');
+      toast.error(
+        err?.response?.status === 413
+          ? FILE_TOO_LARGE_MESSAGE
+          : err?.response?.data?.message || 'Failed to upload document'
+      );
     } finally {
       setIsUploading(false);
     }
@@ -511,7 +534,7 @@ export default function SubjectDetailPage() {
                     type="file"
                     required
                     accept=".pdf,.docx,.doc,.txt"
-                    onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
+                    onChange={handleUploadFileChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   {uploadForm.file ? (
@@ -527,7 +550,7 @@ export default function SubjectDetailPage() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-[#00658D]">Click to upload or drag and drop</p>
-                        <p className="text-xs text-[#6F7880] mt-1">PDF, DOC, DOCX, TXT up to 50MB</p>
+                        <p className="text-xs text-[#6F7880] mt-1">PDF, DOC, DOCX, TXT up to {MAX_UPLOAD_SIZE_MB}MB</p>
                       </div>
                     </div>
                   )}

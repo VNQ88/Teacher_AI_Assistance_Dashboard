@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: vnq88/teacher-ai-dashboard-frontend:latest
+    image: vnq88/teacher-ai-dashboard-frontend:1.0.0
     container_name: teacher-ai-frontend
     restart: unless-stopped
     env_file:
